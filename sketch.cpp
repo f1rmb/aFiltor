@@ -130,7 +130,7 @@ void displayFilter()
 }
 
 //
-// Update attenuator and filter values, take care of calling order (avoiding display messup).
+// Update attenuator and filter displayed values, take care of calling order (avoid display messup).
 //
 void displayUpdate()
 {
@@ -145,6 +145,23 @@ void displayUpdate()
         displayAtt();
         displayFilter();
     }
+}
+
+//
+// Display software banner
+//
+void displayBanner(unsigned long timeout = 1500)
+{
+    char buf[17];
+
+    snprintf(buf, sizeof(buf), "%s %u.%u.%u", PROGRAM.c_str(), VERSION_MAJOR, VERSION_MINOR, VERSION_SUB);
+
+    mKeypad.setCursor(0, 0);
+    mKeypad.printCenter(buf);
+    mKeypad.setCursor(0, 1);
+    mKeypad.printCenter("f1rmb - 2014");
+    delay(timeout);
+    mKeypad.clear();
 }
 
 //
@@ -163,6 +180,9 @@ void displayInfo()
     mKeypad.setCursor(mKeypad.getCols() - strlen(buf), 1);
     mKeypad.print(buf);
     delay(2500);
+    mKeypad.clear();
+
+    displayBanner(2500);
 }
 
 //
@@ -170,10 +190,6 @@ void displayInfo()
 //
 void setup()
 {
-    char buf[17];
-
-    snprintf(buf, sizeof(buf), "%s %u.%u.%u", PROGRAM.c_str(), VERSION_MAJOR, VERSION_MINOR, VERSION_SUB);
-
     mFilters.SetUserFilterName(dhwFilters::FILTER_USER_1, " Bypass ");
     mFilters.SetUserFilterEnabled(dhwFilters::FILTER_USER_1);
 
@@ -182,12 +198,7 @@ void setup()
     for (uint8_t i = 0; i < sizeof(_glyphs) / sizeof(_glyphs[0]); i++)
         mKeypad.createChar(i, (uint8_t *)_glyphs[i]);
 
-    mKeypad.printCenter(buf);
-    mKeypad.setCursor(0, 1);
-    mKeypad.printCenter("f1rmb - 2014");
-    delay(1500);
-    mKeypad.clear();
-
+    displayBanner();
     displayUpdate();
 }
 
@@ -266,7 +277,7 @@ void loop()
                 }
                 else
                 {
-                    displayInfo(); // Display informations (ATM: memory usage)
+                    displayInfo(); // Display informations
                     displayUpdate();
                 }
                 break;
