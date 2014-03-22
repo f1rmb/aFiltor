@@ -25,18 +25,20 @@
 
 #include "MemoryFree.h"
 
-static const String     PROGRAM         = "aFiltor";
-static const uint8_t    VERSION_MAJOR   = 0;
-static const uint8_t    VERSION_MINOR   = 1;
-static const uint8_t    VERSION_SUB     = 0;
+static const String         PROGRAM         = "aFiltor";
+static const uint8_t        VERSION_MAJOR   = 0;
+static const uint8_t        VERSION_MINOR   = 2;
+static const uint8_t        VERSION_SUB     = 0;
 
+static const uint8_t        GLYPH_MARKER    = 0;
+static const uint8_t        GLYPH_FOCUS     = 1;
+static const uint8_t        GLYPH_LIGHT     = 2;
+static const uint8_t        GLYPH_SPACE     = 32;
+static const uint8_t        GLYPH_MINUS     = 45;
 
-static const uint8_t    GLYPH_MARKER    = 0;
-static const uint8_t    GLYPH_FOCUS     = 1;
-static const uint8_t    GLYPH_SPACE     = 32;
-static const uint8_t    GLYPH_MINUS     = 45;
+static const unsigned long  BCL_TIMEOUT     = 15000;
 
-static const uint8_t    _glyphs[2][8]   =
+static const uint8_t        _glyphs[3][8]   =
 {
     {
         B11111,
@@ -57,20 +59,39 @@ static const uint8_t    _glyphs[2][8]   =
         B11100,
         B11000,
         B00000
+    },
+    {
+        B01110,
+        B10001,
+        B10001,
+        B01110,
+        B01110,
+        B00100,
+        B00000,
+        B00000
     }
 };
 
 // Keypad + LCD object
-DFR_Keypad              mKeypad(16, 2, A0); // Analog port 0
+DFR_Keypad                  mKeypad(16, 2, A0, 10); // Analog port 0
 // SV1AFN attenuator object
-afnAttenuator           mAtt;
+afnAttenuator               mAtt;
 // WB6DHW filters board object
-dhwFilters              mFilters(0, 1, 2);//12, 11, 10);
+dhwFilters                  mFilters(0, 1, 2);//12, 11, 10);
 
 // States
-static bool             mAttUnity       = true;
-static bool             mAttFocused     = true;
-static uint8_t          mFilterMaxLen;
+static bool                 mAttUnity       = true;
+static bool                 mAttFocused     = true;
+static uint8_t              mFilterMaxLen;
+
+//
+// Display Backlight status
+//
+void displayBcl()
+{
+    mKeypad.setCursor(mKeypad.getCols() - 1, 0);
+    mKeypad.write(mKeypad.getBacklightTimeout() ? GLYPH_SPACE : GLYPH_LIGHT);
+}
 
 //
 // Display Attenuator value
@@ -145,6 +166,8 @@ void displayUpdate()
         displayAtt();
         displayFilter();
     }
+
+    displayBcl();
 }
 
 //
@@ -190,6 +213,8 @@ void displayInfo()
 //
 void setup()
 {
+    mKeypad.setBacklightTimeout(BCL_TIMEOUT);
+
     mFilters.SetUserFilterName(dhwFilters::FILTER_USER_1, " Bypass ");
     mFilters.SetUserFilterEnabled(dhwFilters::FILTER_USER_1);
 
@@ -261,6 +286,11 @@ void loop()
                         mAtt.Dec(10); // Quick go to Attenuation 0 is value is < 10
 
                     displayAtt();
+                }
+                else
+                {
+                    mKeypad.setBacklightTimeout(mKeypad.getBacklightTimeout() ? 0 : BCL_TIMEOUT);
+                    displayBcl();
                 }
                 break;
 
