@@ -176,7 +176,7 @@ void displayBanner(unsigned long timeout = 1500)
 {
     char buf[mKeypad.getCols() + 1];
 
-    snprintf(buf, sizeof(buf), "aFiltor %u.%u.%u", VERSION_MAJOR, VERSION_MINOR, VERSION_SUB);
+    snprintf(buf, sizeof(buf), "aFiltor  %u.%u.%u", VERSION_MAJOR, VERSION_MINOR, VERSION_SUB);
 
     mKeypad.setCursor(0, 0);
     mKeypad.printCenter(buf);
