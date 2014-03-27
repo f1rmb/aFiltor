@@ -40,10 +40,11 @@ static const uint8_t        GLYPH_DB                = 5;
 static const uint8_t        GLYPH_SPACE             = 32;
 static const uint8_t        GLYPH_MINUS             = 45;
 
-static const int            EEPROM_ADDR_BACKLIGHT   = 0;
-static const int            EEPROM_ADDR_ATT         = 1;
-static const int            EEPROM_ADDR_FILTER      = 2;
-static const int            EEPROM_ADDR_DISPLAY     = 3;
+static const int            EEPROM_ADDR_MAGIC       = 0; // 0xDEAD
+static const int            EEPROM_ADDR_BACKLIGHT   = 4;
+static const int            EEPROM_ADDR_ATT         = 5;
+static const int            EEPROM_ADDR_FILTER      = 6;
+static const int            EEPROM_ADDR_DISPLAY     = 7;
 
 static const unsigned long  BCL_TIMEOUT             = 15000;
 
@@ -133,6 +134,60 @@ static bool                 mAttFocused     = true;
 static uint8_t              mFilterMaxLen;
 static Att_Display_t        mAttDisplay     = DISPLAY_ATT;
 
+
+//
+// Magic numbers
+//
+bool magicEEPROM()
+{
+    if ((EEPROM.read(EEPROM_ADDR_MAGIC) == 0xD) && (EEPROM.read(EEPROM_ADDR_MAGIC + 1) == 0xE)
+        && (EEPROM.read(EEPROM_ADDR_MAGIC + 2) == 0xA) && (EEPROM.read(EEPROM_ADDR_MAGIC + 3) == 0xD))
+            return true;
+
+    return false;
+}
+void magicWriteEEPROM()
+{
+    // Magic numbers
+    EEPROM.write(EEPROM_ADDR_MAGIC,     0xD);
+    EEPROM.write(EEPROM_ADDR_MAGIC + 1, 0xE);
+    EEPROM.write(EEPROM_ADDR_MAGIC + 2, 0xA);
+    EEPROM.write(EEPROM_ADDR_MAGIC + 3, 0xD);
+}
+
+//
+// Reset config to EEPROM
+//
+void resetEEPROM(bool show = true)
+{
+    if (show)
+    {
+        mKeypad.clear();
+        mKeypad.setCursor(0, 0);
+        mKeypad.printCenter(F("Reset Settings....."));
+    }
+
+    magicWriteEEPROM();
+
+    EEPROM.write(EEPROM_ADDR_BACKLIGHT, 1);
+    mKeypad.setBacklightTimeout(BCL_TIMEOUT);
+
+    EEPROM.write(EEPROM_ADDR_ATT, 0);//
+    mAtt.SetValue(0);
+
+    EEPROM.write(EEPROM_ADDR_FILTER, dhwFilters::FILTER_2_11);
+    mFilters.SetFilter(dhwFilters::FILTER_2_11);
+
+    EEPROM.write(EEPROM_ADDR_DISPLAY, DISPLAY_ATT);
+    mAttDisplay = DISPLAY_ATT;
+
+    if (show)
+    {
+        mKeypad.setCursor(0, 1);
+        mKeypad.printCenter(F("Done"));
+    }
+}
+
 //
 // Read config from EEPROM
 //
@@ -141,6 +196,9 @@ void readEEPROM()
     mKeypad.clear();
     mKeypad.setCursor(0, 0);
     mKeypad.printCenter(F("Restore Settings..."));
+
+    if (!magicEEPROM())
+        resetEEPROM(false);
 
     mKeypad.setBacklightTimeout((EEPROM.read(EEPROM_ADDR_BACKLIGHT) == 1) ? BCL_TIMEOUT : 0);
     mAtt.SetValue(EEPROM.read(EEPROM_ADDR_ATT), true);
@@ -160,35 +218,12 @@ void saveEEPROM()
     mKeypad.setCursor(0, 0);
     mKeypad.printCenter(F("Save Settings......"));
 
+    magicWriteEEPROM();
+
     EEPROM.write(EEPROM_ADDR_BACKLIGHT, mKeypad.getBacklightTimeout() > 0 ? 1 : 0);
     EEPROM.write(EEPROM_ADDR_ATT, mAtt.GetValue());
     EEPROM.write(EEPROM_ADDR_FILTER, mFilters.GetFilter());
     EEPROM.write(EEPROM_ADDR_DISPLAY, mAttDisplay);
-
-    mKeypad.setCursor(0, 1);
-    mKeypad.printCenter(F("Done"));
-}
-
-//
-// Reset config to EEPROM
-//
-void resetEEPROM()
-{
-    mKeypad.clear();
-    mKeypad.setCursor(0, 0);
-    mKeypad.printCenter(F("Reset Settings....."));
-
-    EEPROM.write(EEPROM_ADDR_BACKLIGHT, 1);
-    mKeypad.setBacklightTimeout(BCL_TIMEOUT);
-
-    EEPROM.write(EEPROM_ADDR_ATT, 0);//
-    mAtt.SetValue(0);
-
-    EEPROM.write(EEPROM_ADDR_FILTER, dhwFilters::FILTER_2_11);
-    mFilters.SetFilter(dhwFilters::FILTER_2_11);
-
-    EEPROM.write(EEPROM_ADDR_DISPLAY, DISPLAY_ATT);
-    mAttDisplay = DISPLAY_ATT;
 
     mKeypad.setCursor(0, 1);
     mKeypad.printCenter(F("Done"));
