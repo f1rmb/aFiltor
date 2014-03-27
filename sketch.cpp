@@ -18,7 +18,9 @@
 
 #include <Arduino.h>
 #include <avr/pgmspace.h>
+#include <stdlib.h>
 
+#include <EEPROM.h>
 #include <DFR_Keypad.h>
 #include <afnAttenuator.h>
 #include <dhwFilters.h>
@@ -32,12 +34,19 @@ static const uint8_t        VERSION_SUB             = 0;
 static const uint8_t        GLYPH_MARKER            = 0;
 static const uint8_t        GLYPH_FOCUS             = 1;
 static const uint8_t        GLYPH_LIGHT             = 2;
+static const uint8_t        GLYPH_OPEN              = 3;
+static const uint8_t        GLYPH_CLOSE             = 4;
+static const uint8_t        GLYPH_DB                = 5;
 static const uint8_t        GLYPH_SPACE             = 32;
 static const uint8_t        GLYPH_MINUS             = 45;
 
+static const int            EEPROM_ADDR_BACKLIGHT   = 0;
+static const int            EEPROM_ADDR_ATT         = 1;
+static const int            EEPROM_ADDR_FILTER      = 2;
+
 static const unsigned long  BCL_TIMEOUT             = 15000;
 
-static const uint8_t        _glyphs[3][8] PROGMEM   =
+static const uint8_t        _glyphs[6][8] PROGMEM   =
 {
     {
         B11111,
@@ -68,8 +77,47 @@ static const uint8_t        _glyphs[3][8] PROGMEM   =
         B00100,
         B00000,
         B00000
+    },
+    {
+        B00111,
+        B00110,
+        B00100,
+        B00000,
+        B00100,
+        B00110,
+        B00111,
+        B00000
+    },
+    {
+        B11100,
+        B01100,
+        B00100,
+        B00000,
+        B00100,
+        B01100,
+        B11100,
+        B00000
+    },
+    {
+        B01011,
+        B10101,
+        B10101,
+        B11111,
+        B00000,
+        B11111,
+        B00101,
+        B00111
     }
 };
+
+typedef enum
+{
+    DISPLAY_ATT,            // Display att value (from chip)
+    DISPLAY_ATT_CORRECTED,  // Display both
+    DISPLAY_CORRECTED       // Display "real" atenuation
+
+} Att_Display_t;
+
 
 // Keypad + LCD object
 DFR_Keypad                  mKeypad(16, 2, A0, 10); // Analog port 0
@@ -82,6 +130,41 @@ dhwFilters                  mFilters(0, 1, 2);//12, 11, 10);
 static bool                 mAttUnity       = true;
 static bool                 mAttFocused     = true;
 static uint8_t              mFilterMaxLen;
+static Att_Display_t        mAttDisplay     = DISPLAY_ATT;
+
+//
+// Read config from EEPROM
+//
+void readEEPROM()
+{
+    mKeypad.clear();
+    mKeypad.setCursor(0, 0);
+    mKeypad.printCenter(F("Restore Settings..."));
+
+    mKeypad.setBacklightTimeout((EEPROM.read(EEPROM_ADDR_BACKLIGHT) == 1) ? BCL_TIMEOUT : 0);
+    mAtt.SetValue(EEPROM.read(EEPROM_ADDR_ATT), true);
+    mFilters.SetFilter(dhwFilters::FilterWidth_t(EEPROM_ADDR_FILTER));
+
+    mKeypad.setCursor(0, 1);
+    mKeypad.printCenter(F("Done"));
+}
+
+//
+// Save config to EEPROM
+//
+void saveEEPROM()
+{
+    mKeypad.clear();
+    mKeypad.setCursor(0, 0);
+    mKeypad.printCenter(F("Save Settings......"));
+
+    EEPROM.write(EEPROM_ADDR_BACKLIGHT, mKeypad.getBacklightTimeout() > 0 ? 1 : 0);
+    EEPROM.write(EEPROM_ADDR_ATT, mAtt.GetValue());
+    EEPROM.write(EEPROM_ADDR_FILTER, mFilters.GetFilter());
+
+    mKeypad.setCursor(0, 1);
+    mKeypad.printCenter(F("Done"));
+}
 
 //
 // Display Backlight status
@@ -97,18 +180,68 @@ void displayBcl()
 //
 void displayAtt()
 {
-    uint8_t a = mAtt.GetValue();
 
     mKeypad.setCursor(0, 0);
     mKeypad.write(mAttFocused ? GLYPH_FOCUS : GLYPH_SPACE);
     mKeypad.write(GLYPH_SPACE);
 
-    if (a < 10)
-        mKeypad.write(GLYPH_SPACE);
+    switch (mAttDisplay)
+    {
+        case DISPLAY_ATT:
+        case DISPLAY_ATT_CORRECTED:
+            {
+                uint8_t a = mAtt.GetValue();
 
-    mKeypad.write(a > 0 ? GLYPH_MINUS : GLYPH_SPACE);
-    mKeypad.print(a, DEC);
-    mKeypad.print(F(" dB"));
+                if (a < 10)
+                    mKeypad.write(GLYPH_SPACE);
+
+                mKeypad.write(a > 0 ? GLYPH_MINUS : GLYPH_SPACE);
+                mKeypad.print(a, DEC);
+
+                if (mAttDisplay == DISPLAY_ATT)
+                    mKeypad.print(F(" dB"));
+
+                if (mAttDisplay == DISPLAY_ATT)
+                {
+                    mKeypad.setCursor(mKeypad.getCols() - 7, 0);
+
+                    mKeypad.print(F("      "));
+
+                    if (a < 10)
+                        mKeypad.write(GLYPH_SPACE);
+
+                    break;
+                }
+
+            }
+        case DISPLAY_CORRECTED:
+            {
+                double a = mAtt.GetRealValue();
+
+                if (mAttDisplay == DISPLAY_ATT_CORRECTED)
+                    mKeypad.setCursor(mKeypad.getCols() - 10, 0);
+                else
+                    mKeypad.setCursor(2, 0);
+
+                if (a < 10)
+                    mKeypad.write(GLYPH_SPACE);
+
+                if (mAttDisplay == DISPLAY_ATT_CORRECTED)
+                    mKeypad.write(GLYPH_OPEN);
+
+                mKeypad.write(a > 0.0 ? GLYPH_MINUS : GLYPH_SPACE);
+                mKeypad.print(a, 2);
+
+                if (mAttDisplay == DISPLAY_CORRECTED)
+                    mKeypad.print(F(" dB    "));
+                else
+                {
+                    mKeypad.write(GLYPH_CLOSE);
+                    mKeypad.write(GLYPH_DB);
+                }
+            }
+            break;
+    }
 
     mKeypad.setCursor(3, 1);
 
@@ -213,6 +346,7 @@ void displayInfo()
 void setup()
 {
     mKeypad.setBacklightTimeout(BCL_TIMEOUT);
+    mKeypad.setRepeatMode(false);
 
     mFilters.SetUserFilterName(dhwFilters::FILTER_USER_1, F(" Bypass "));
     mFilters.SetUserFilterEnabled(dhwFilters::FILTER_USER_1);
@@ -230,6 +364,8 @@ void setup()
     }
 
     displayBanner();
+    readEEPROM();
+    delay(1000);
     displayUpdate();
 }
 
@@ -295,31 +431,56 @@ void loop()
                 }
                 else
                 {
-                    mKeypad.setBacklightTimeout(mKeypad.getBacklightTimeout() ? 0 : BCL_TIMEOUT);
-                    displayBcl();
+                    if (mKeypad.isLongPressed())
+                    {
+                        saveEEPROM();
+                        delay(1000);
+                        displayUpdate();
+                    }
                 }
                 break;
 
             case KEY_RIGHT:
                 if (mAttFocused)
                 {
-                    if (mAtt.GetValue() >= 10) // Switch from unity and tenth, if attenuation value is >= 10
-                        mAttUnity = !mAttUnity;
+                    if (mKeypad.isLongPressed())
+                    {
+                        mAttDisplay = Att_Display_t(int(mAttDisplay) + 1);
+
+                        if (mAttDisplay > DISPLAY_CORRECTED)
+                            mAttDisplay = DISPLAY_ATT;
+                    }
                     else
-                        mAtt.Inc(10); // Quickly increment +10 if attenuation is < 10
+                    {
+                        if (mAtt.GetValue() >= 10) // Switch from unity and tenth, if attenuation value is >= 10
+                            mAttUnity = !mAttUnity;
+                        else
+                            mAtt.Inc(10); // Quickly increment +10 if attenuation is < 10
+                    }
 
                     displayAtt();
                 }
                 else
                 {
-                    displayInfo(); // Display informations
-                    displayUpdate();
+                    if (mKeypad.isLongPressed())
+                    {
+                        displayInfo(); // Display informations
+                        displayUpdate();
+                    }
                 }
                 break;
 
             case KEY_SELECT:
-                mAttFocused = !mAttFocused; // Toggle between attenuator and filter
-                displayUpdate();
+                if (mKeypad.isLongPressed())
+                {
+                    mKeypad.setBacklightTimeout(mKeypad.getBacklightTimeout() ? 0 : BCL_TIMEOUT);
+                    displayBcl();
+                }
+                else
+                {
+                    mAttFocused = !mAttFocused; // Toggle between attenuator and filter
+                    displayUpdate();
+                }
                 break;
 
             case KEY_NO:
