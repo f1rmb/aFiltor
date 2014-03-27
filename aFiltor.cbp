@@ -383,7 +383,7 @@
 			<Add option="-s" />
 			<Add option="-DF_CPU=16000000L" />
 			<Add option="-DARDUINO=101" />
-			<Add option="-DUSE_EEPROM=0" />
+			<Add option="-DUSE_EEPROM=1" />
 			<Add option="-DUSE_ETHERNET=0" />
 			<Add option="-DUSE_FIRMATA=0" />
 			<Add option="-DUSE_LCD=1" />

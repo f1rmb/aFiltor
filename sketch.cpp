@@ -43,6 +43,7 @@ static const uint8_t        GLYPH_MINUS             = 45;
 static const int            EEPROM_ADDR_BACKLIGHT   = 0;
 static const int            EEPROM_ADDR_ATT         = 1;
 static const int            EEPROM_ADDR_FILTER      = 2;
+static const int            EEPROM_ADDR_DISPLAY     = 3;
 
 static const unsigned long  BCL_TIMEOUT             = 15000;
 
@@ -143,7 +144,8 @@ void readEEPROM()
 
     mKeypad.setBacklightTimeout((EEPROM.read(EEPROM_ADDR_BACKLIGHT) == 1) ? BCL_TIMEOUT : 0);
     mAtt.SetValue(EEPROM.read(EEPROM_ADDR_ATT), true);
-    mFilters.SetFilter(dhwFilters::FilterWidth_t(EEPROM_ADDR_FILTER));
+    mFilters.SetFilter(dhwFilters::FilterWidth_t(EEPROM.read(EEPROM_ADDR_FILTER)));
+    mAttDisplay = Att_Display_t(EEPROM.read(EEPROM_ADDR_DISPLAY));
 
     mKeypad.setCursor(0, 1);
     mKeypad.printCenter(F("Done"));
@@ -161,6 +163,32 @@ void saveEEPROM()
     EEPROM.write(EEPROM_ADDR_BACKLIGHT, mKeypad.getBacklightTimeout() > 0 ? 1 : 0);
     EEPROM.write(EEPROM_ADDR_ATT, mAtt.GetValue());
     EEPROM.write(EEPROM_ADDR_FILTER, mFilters.GetFilter());
+    EEPROM.write(EEPROM_ADDR_DISPLAY, mAttDisplay);
+
+    mKeypad.setCursor(0, 1);
+    mKeypad.printCenter(F("Done"));
+}
+
+//
+// Reset config to EEPROM
+//
+void resetEEPROM()
+{
+    mKeypad.clear();
+    mKeypad.setCursor(0, 0);
+    mKeypad.printCenter(F("Reset Settings....."));
+
+    EEPROM.write(EEPROM_ADDR_BACKLIGHT, 1);
+    mKeypad.setBacklightTimeout(BCL_TIMEOUT);
+
+    EEPROM.write(EEPROM_ADDR_ATT, 0);//
+    mAtt.SetValue(0);
+
+    EEPROM.write(EEPROM_ADDR_FILTER, dhwFilters::FILTER_2_11);
+    mFilters.SetFilter(dhwFilters::FILTER_2_11);
+
+    EEPROM.write(EEPROM_ADDR_DISPLAY, DISPLAY_ATT);
+    mAttDisplay = DISPLAY_ATT;
 
     mKeypad.setCursor(0, 1);
     mKeypad.printCenter(F("Done"));
@@ -205,7 +233,7 @@ void displayAtt()
                 {
                     mKeypad.setCursor(mKeypad.getCols() - 7, 0);
 
-                    mKeypad.print(F("      "));
+                    mKeypad.print(F("     "));
 
                     if (a < 10)
                         mKeypad.write(GLYPH_SPACE);
@@ -397,8 +425,17 @@ void loop()
                 }
                 else
                 {
-                    mFilters.Next(); // Select next filter
-                    displayFilter();
+                    if (mKeypad.isLongPressed())
+                    {
+                        saveEEPROM();
+                        delay(1000);
+                        displayUpdate();
+                    }
+                    else
+                    {
+                        mFilters.Next(); // Select next filter
+                        displayFilter();
+                    }
                 }
                 break;
 
@@ -414,8 +451,17 @@ void loop()
                 }
                 else
                 {
-                    mFilters.Previous(); // Seletec previous filter
-                    displayFilter();
+                    if (mKeypad.isLongPressed())
+                    {
+                        resetEEPROM();
+                        delay(1000);
+                        displayUpdate();
+                    }
+                    else
+                    {
+                        mFilters.Previous(); // Seletec previous filter
+                        displayFilter();
+                    }
                 }
                 break;
 
@@ -428,15 +474,6 @@ void loop()
                         mAtt.Dec(10); // Quick go to Attenuation 0 is value is < 10
 
                     displayAtt();
-                }
-                else
-                {
-                    if (mKeypad.isLongPressed())
-                    {
-                        saveEEPROM();
-                        delay(1000);
-                        displayUpdate();
-                    }
                 }
                 break;
 
