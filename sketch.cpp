@@ -28,8 +28,8 @@
 #include "MemoryFree.h"
 
 static const uint8_t        VERSION_MAJOR           = 0;
-static const uint8_t        VERSION_MINOR           = 2;
-static const uint8_t        VERSION_SUB             = 0;
+static const uint8_t        VERSION_MINOR           = 9;
+static const uint8_t        VERSION_SUB             = 9;
 
 static const uint8_t        GLYPH_MARKER            = 0;
 static const uint8_t        GLYPH_FOCUS             = 1;
