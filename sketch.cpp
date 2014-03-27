@@ -383,6 +383,24 @@ void displayBanner(unsigned long timeout = 1500)
 }
 
 //
+// Display Compiler Informations
+//
+void displayCompiler(unsigned long timeout = 3000)
+{
+    char buf[32];
+
+    snprintf(buf, sizeof(buf), "g++ %d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+
+    mKeypad.setCursor(0, 0);
+    mKeypad.printCenter(buf);
+    mKeypad.setCursor(0, 1);
+    snprintf(buf, sizeof(buf), "%s %s", __DATE__, __TIME__);
+    mKeypad.printCenter(buf);
+    delay(timeout);
+    mKeypad.clear();
+}
+
+//
 // Display memory information
 //
 void displayInfo()
@@ -537,6 +555,7 @@ void loop()
                     if (mKeypad.isLongPressed())
                     {
                         displayInfo(); // Display informations
+                        displayCompiler();
                         displayUpdate();
                     }
                 }
