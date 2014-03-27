@@ -47,16 +47,16 @@
 				<Option type="1" />
 				<Option compiler="avr-gcc" />
 				<Compiler>
+					<Add option="-Os" />
 					<Add option="-mmcu=$(MCU)" />
 					<Add option="-D__AVR_ATmega328P__" />
-					<Add option="-Os" />
 					<Add directory="$(ARDUINO_DIR)/hardware/arduino/cores/arduino" />
 					<Add directory="$(ARDUINO_DIR)/libraries" />
 					<Add directory="$(ARDUINO_DIR)/hardware/arduino/variants/standard" />
 				</Compiler>
 				<Linker>
-					<Add option="-mmcu=$(MCU)" />
 					<Add option="-s" />
+					<Add option="-mmcu=$(MCU)" />
 				</Linker>
 				<ExtraCommands>
 					<Add after="avr-objcopy -O ihex -R .eeprom -R .eesafe $(TARGET_OUTPUT_FILE) $(TARGET_OUTPUT_FILE).hex" />
@@ -69,7 +69,7 @@
 					<Variable name="MCU" value="atmega328p" />
 					<Variable name="PROGRAMMER_ID" value="arduino" />
 					<Variable name="UPLOAD_BAUDRATE" value="115200" />
-					<Variable name="UPLOAD_PORT" value="/dev/ttyACM3" />
+					<Variable name="UPLOAD_PORT" value="/dev/ttyACM0" />
 				</Environment>
 			</Target>
 			<Target title="Arduino Duemilanove (328)">

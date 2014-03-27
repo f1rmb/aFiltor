@@ -136,9 +136,9 @@ static Att_Display_t        mAttDisplay     = DISPLAY_ATT;
 
 
 //
-// Magic numbers
+// Magic numbers stuff
 //
-bool magicEEPROM()
+bool eepromCheckMagic()
 {
     if ((EEPROM.read(EEPROM_ADDR_MAGIC) == 0xD) && (EEPROM.read(EEPROM_ADDR_MAGIC + 1) == 0xE)
         && (EEPROM.read(EEPROM_ADDR_MAGIC + 2) == 0xA) && (EEPROM.read(EEPROM_ADDR_MAGIC + 3) == 0xD))
@@ -146,7 +146,7 @@ bool magicEEPROM()
 
     return false;
 }
-void magicWriteEEPROM()
+void eepromWriteMagic()
 {
     // Magic numbers
     EEPROM.write(EEPROM_ADDR_MAGIC,     0xD);
@@ -156,9 +156,9 @@ void magicWriteEEPROM()
 }
 
 //
-// Reset config to EEPROM
+// Reset config into EEPROM
 //
-void resetEEPROM(bool show = true)
+void eepromReset(bool show = true)
 {
     if (show)
     {
@@ -167,12 +167,12 @@ void resetEEPROM(bool show = true)
         mKeypad.printCenter(F("Reset Settings....."));
     }
 
-    magicWriteEEPROM();
+    eepromWriteMagic();
 
     EEPROM.write(EEPROM_ADDR_BACKLIGHT, 1);
     mKeypad.setBacklightTimeout(BCL_TIMEOUT);
 
-    EEPROM.write(EEPROM_ADDR_ATT, 0);//
+    EEPROM.write(EEPROM_ADDR_ATT, 0);
     mAtt.SetValue(0);
 
     EEPROM.write(EEPROM_ADDR_FILTER, dhwFilters::FILTER_2_11);
@@ -189,16 +189,16 @@ void resetEEPROM(bool show = true)
 }
 
 //
-// Read config from EEPROM
+// Restore config from EEPROM
 //
-void readEEPROM()
+void eepromRestore()
 {
     mKeypad.clear();
     mKeypad.setCursor(0, 0);
     mKeypad.printCenter(F("Restore Settings..."));
 
-    if (!magicEEPROM())
-        resetEEPROM(false);
+    if (!eepromCheckMagic())
+        eepromReset(false);
 
     mKeypad.setBacklightTimeout((EEPROM.read(EEPROM_ADDR_BACKLIGHT) == 1) ? BCL_TIMEOUT : 0);
     mAtt.SetValue(EEPROM.read(EEPROM_ADDR_ATT), true);
@@ -210,15 +210,15 @@ void readEEPROM()
 }
 
 //
-// Save config to EEPROM
+// Backup config into EEPROM
 //
-void saveEEPROM()
+void eepromBackup()
 {
     mKeypad.clear();
     mKeypad.setCursor(0, 0);
     mKeypad.printCenter(F("Save Settings......"));
 
-    magicWriteEEPROM();
+    eepromWriteMagic();
 
     EEPROM.write(EEPROM_ADDR_BACKLIGHT, mKeypad.getBacklightTimeout() > 0 ? 1 : 0);
     EEPROM.write(EEPROM_ADDR_ATT, mAtt.GetValue());
@@ -427,7 +427,7 @@ void setup()
     }
 
     displayBanner();
-    readEEPROM();
+    eepromRestore();
     delay(1000);
     displayUpdate();
 }
@@ -462,7 +462,7 @@ void loop()
                 {
                     if (mKeypad.isLongPressed())
                     {
-                        saveEEPROM();
+                        eepromBackup();
                         delay(1000);
                         displayUpdate();
                     }
@@ -488,7 +488,7 @@ void loop()
                 {
                     if (mKeypad.isLongPressed())
                     {
-                        resetEEPROM();
+                        eepromReset();
                         delay(1000);
                         displayUpdate();
                     }
