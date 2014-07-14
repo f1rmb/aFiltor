@@ -122,11 +122,11 @@ typedef enum
 
 
 // Keypad + LCD object
-DFR_Keypad                  mKeypad(16, 2, A0, 10); // Analog port 0
+DFR_Keypad                  mKeypad(16, 2, A0, 3); // A0: Analog port 0
 // SV1AFN attenuator object
 afnAttenuator               mAtt;
 // WB6DHW filters board object
-dhwFilters                  mFilters(0, 1, 2);//12, 11, 10);
+dhwFilters                  mFilters(0, 1, 2);
 
 // States
 static bool                 mAttUnity       = true;
@@ -377,7 +377,7 @@ void displayBanner(unsigned long timeout = 1500)
     mKeypad.setCursor(0, 0);
     mKeypad.printCenter(buf);
     mKeypad.setCursor(0, 1);
-    mKeypad.printCenter(F("f1rmb - 2014"));
+    mKeypad.printCenter(F("(c)2014 f1rmb & f1jky"));
     delay(timeout);
     mKeypad.clear();
 }
@@ -385,7 +385,7 @@ void displayBanner(unsigned long timeout = 1500)
 //
 // Display Compiler Informations
 //
-void displayCompiler(unsigned long timeout = 3000)
+void displayCompiler(unsigned long timeout = 1500)
 {
     char buf[32];
 
@@ -557,6 +557,7 @@ void loop()
                         displayInfo(); // Display informations
                         displayCompiler();
                         displayUpdate();
+                        mKeypad.timeoutEvent(); // Avoiding backlight dimming for now
                     }
                 }
                 break;

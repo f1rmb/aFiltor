@@ -69,7 +69,7 @@
 					<Variable name="MCU" value="atmega328p" />
 					<Variable name="PROGRAMMER_ID" value="arduino" />
 					<Variable name="UPLOAD_BAUDRATE" value="115200" />
-					<Variable name="UPLOAD_PORT" value="/dev/ttyACM0" />
+					<Variable name="UPLOAD_PORT" value="/dev/ttyACM3" />
 				</Environment>
 			</Target>
 			<Target title="Arduino Duemilanove (328)">
